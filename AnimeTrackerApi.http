@@ -1,0 +1,6 @@
+@AnimeTrackerApi_HostAddress = http://localhost:5115
+
+GET {{AnimeTrackerApi_HostAddress}}
+Accept: application/json
+
+###
