@@ -13,13 +13,12 @@ namespace AnimeTrackerApi.Bot.Services
 {
     public class NotificationService : BackgroundService
     {
-        private readonly ILogger<NotificationService> _logger; // Правильне оголошення
+        private readonly ILogger<NotificationService> _logger;
 
-        // У конструкторі:
         public NotificationService(IServiceProvider serviceProvider, ILogger<NotificationService> logger)
         {
             _serviceProvider = serviceProvider;
-            _logger = logger; // Ініціалізація
+            _logger = logger; 
         }
 
         private readonly IServiceProvider _serviceProvider;
@@ -43,7 +42,6 @@ namespace AnimeTrackerApi.Bot.Services
 
         private async Task DoWorkAsync(CancellationToken stoppingToken)
         {
-            // Перенесіть сюди всю логіку з ExecuteAsync
             _logger.LogInformation("🔔 Notification Service started");
 
             while (!stoppingToken.IsCancellationRequested)
@@ -102,7 +100,6 @@ namespace AnimeTrackerApi.Bot.Services
                     anime.ReleaseDate,
                     TimeZoneInfo.FindSystemTimeZoneById("Europe/Kiev"));
 
-                // 1. Відправляємо сповіщення
                 var message = $"🎉 <b>{anime.Title}</b> вийшло!\n" +
                              $"📅 Дата релізу: {kyivTime:dd.MM.yyyy HH:mm}\n" +
                              $"🔗 <a href=\"{anime.MalUrl}\">MyAnimeList</a>";
@@ -112,12 +109,10 @@ namespace AnimeTrackerApi.Bot.Services
                     text: message,
                     parseMode: ParseMode.Html);
 
-                // 2. Автоматично додаємо до watchlist
                 using var scope = _serviceProvider.CreateScope();
                 var watchlistRepo = scope.ServiceProvider.GetRequiredService<IWatchlistRepository>();
                 var jikanService = scope.ServiceProvider.GetRequiredService<JikanService>();
 
-                // Витягуємо MAL ID з посилання
                 var malId = ExtractMalId(anime.MalUrl);
 
                 if (malId > 0)
@@ -134,7 +129,7 @@ namespace AnimeTrackerApi.Bot.Services
                             Description = animeDetails.Synopsis,
                             PictureUrl = animeDetails.PictureUrl,
                             MyAnimeListUrl = animeDetails.MyAnimeListUrl ?? anime.MalUrl,
-                            Status = "Watching", // Автоматично ставимо статус "Дивлюся"
+                            Status = "Watching",
                             AddedDate = DateTime.UtcNow
                         };
 
@@ -149,12 +144,9 @@ namespace AnimeTrackerApi.Bot.Services
             }
         }
 
-        // Метод для витягування MAL ID з URL
         private int ExtractMalId(string malUrl)
         {
             if (string.IsNullOrEmpty(malUrl)) return 0;
-
-            // Приклад URL: https://myanimelist.net/anime/5114/Fullmetal_Alchemist__Brotherhood
             var match = Regex.Match(malUrl, @"anime/(\d+)");
             return match.Success ? int.Parse(match.Groups[1].Value) : 0;
         }
