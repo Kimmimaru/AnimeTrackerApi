@@ -10,5 +10,6 @@ namespace AnimeTrackerApi.Data.Repositories
         Task<bool> UpdateStatusAsync(int itemId, int userId, string newStatus);
         Task<List<WatchlistItem>> GetRecentlyAddedAnimeAsync(int userId, int limit = 5);
         Task<List<WatchlistItem>> GetWatchingAnimeAsync(int userId);
+        Task<bool> CheckAnimeInWatchlistAsync(int userId, int animeId);
     }
 }

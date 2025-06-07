@@ -120,7 +120,19 @@ namespace AnimeTrackerApi.Controllers
             }
         }
 
-        
+        [HttpGet("check")]
+        public async Task<IActionResult> CheckAnimeInWatchlist(
+    [FromQuery] int userId,
+    [FromQuery] int animeId)
+        {
+            if (userId <= 0 || animeId <= 0)
+                return BadRequest("Valid user ID and anime ID are required");
+
+            var exists = await _watchlistRepository.CheckAnimeInWatchlistAsync(userId, animeId);
+            return Ok(exists);
+        }
+
+
     }
 }
 

@@ -109,5 +109,11 @@ namespace AnimeTrackerApi.Data.Repositories
                 .ToListAsync();
         }
 
+        public async Task<bool> CheckAnimeInWatchlistAsync(int userId, int animeId)
+        {
+            return await _context.WatchlistItems
+                .AnyAsync(x => x.UserId == userId && x.AnimeId == animeId);
+        }
+
     }
 }
