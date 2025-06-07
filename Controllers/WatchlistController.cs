@@ -2,6 +2,8 @@
 using AnimeTrackerApi.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using AnimeTrackerApi.Services;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace AnimeTrackerApi.Controllers
 {
@@ -24,18 +26,49 @@ namespace AnimeTrackerApi.Controllers
             if (item.AnimeId <= 0 || item.UserId <= 0)
                 return BadRequest("Valid anime ID and user ID are required");
 
+            // Перевірка наявності аніме
             var animeDetails = await _jikanService.GetAnimeById(item.AnimeId);
             if (animeDetails == null)
                 return NotFound("Anime not found");
 
+            // Заповнюємо обов'язкові поля
             item.Title = animeDetails.GetBestAvailableTitle();
             item.Description = animeDetails.Synopsis;
             item.PictureUrl = animeDetails.PictureUrl;
-            item.MyAnimeListUrl = $"https://myanimelist.net/anime/{item.AnimeId}";
+            item.MyAnimeListUrl = animeDetails.MyAnimeListUrl;
             item.AddedDate = DateTime.UtcNow;
 
-            var result = await _watchlistRepository.AddToWatchlistAsync(item);
-            return Ok(result);
+            try
+            {
+                var result = await _watchlistRepository.AddToWatchlistAsync(item);
+
+                if (result.Id != item.Id)
+                {
+                    return Ok(new
+                    {
+                        Success = false,
+                        Message = "Це аніме вже є у вашому списку",
+                        Item = result
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Аніме успішно додано",
+                    Item = result
+                });
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException pgEx && pgEx.SqlState == "23505")
+            {
+                var existingItem = await _watchlistRepository.GetByUserAndAnimeIdAsync(item.UserId, item.AnimeId);
+                return Ok(new
+                {
+                    Success = false,
+                    Message = "Це аніме вже є у вашому списку",
+                    Item = existingItem
+                });
+            }
         }
 
         [HttpGet]

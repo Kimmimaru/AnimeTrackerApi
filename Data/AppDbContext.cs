@@ -30,7 +30,9 @@ namespace AnimeTrackerApi.Data
                 entity.Property(e => e.Status).HasColumnName("status");
                 entity.Property(e => e.AddedDate).HasColumnName("added_date");
 
-                entity.HasIndex(w => new { w.UserId, w.AnimeId }).IsUnique();
+                entity.HasIndex(w => new { w.UserId, w.AnimeId })
+              .IsUnique()
+              .HasDatabaseName("IX_Watchlist_UserAnime");
             });
 
             modelBuilder.Entity<ExpectedAnime>(entity =>
