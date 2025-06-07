@@ -22,37 +22,41 @@ namespace AnimeTrackerApi.Controllers
         [HttpPost("add")]
         public async Task<IActionResult> AddToWatchlist([FromBody] WatchlistItem item)
         {
-            if (item.AnimeId <= 0 || item.UserId <= 0)
-                return BadRequest("Valid anime ID and user ID are required");
-
             try
             {
-                var exists = await _watchlistRepository.CheckAnimeInWatchlistAsync(item.UserId, item.AnimeId);
-                if (exists)
+                if (await _watchlistRepository.CheckAnimeInWatchlistAsync(item.UserId, item.AnimeId))
                 {
-                    return Conflict("This anime is already in your watchlist");
+                    return Ok(new { success = true, message = "Already exists" });
                 }
 
                 var animeDetails = await _jikanService.GetAnimeById(item.AnimeId);
-                if (animeDetails == null)
-                    return NotFound("Anime not found");
+                if (animeDetails == null) return NotFound();
 
                 item.Title = animeDetails.GetBestAvailableTitle();
-                item.Description = animeDetails.Synopsis;
-                item.PictureUrl = animeDetails.PictureUrl;
-                item.MyAnimeListUrl = $"https://myanimelist.net/anime/{item.AnimeId}";
                 item.AddedDate = DateTime.UtcNow;
 
-                var result = await _watchlistRepository.AddToWatchlistAsync(item);
-                return Ok(result);
-            }
-            catch (DbUpdateException ex)
-            {
-                return StatusCode(500, $"Database error: {ex.InnerException?.Message}");
+                for (int i = 0; i < 3; i++)
+                {
+                    try
+                    {
+                        var result = await _watchlistRepository.AddToWatchlistAsync(item);
+                        if (result != null)
+                        {
+                            return Ok(new { success = true });
+                        }
+                        await Task.Delay(100 * (i + 1));
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        if (i == 2) throw;
+                    }
+                }
+
+                return Conflict();
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                return StatusCode(500, ex.Message);
             }
         }
 

@@ -14,24 +14,32 @@ namespace AnimeTrackerApi.Data.Repositories
 
         public async Task<WatchlistItem> AddToWatchlistAsync(WatchlistItem item)
         {
-            var existingItem = await _context.WatchlistItems
-                .FirstOrDefaultAsync(x => x.UserId == item.UserId && x.AnimeId == item.AnimeId);
-
-            if (existingItem != null)
-            {
-                return existingItem;
-            }
-
-            _context.WatchlistItems.Add(item);
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
+                var exists = await _context.WatchlistItems
+                    .FromSqlInterpolated($@"SELECT * FROM watchlist 
+                                  WHERE user_id = {item.UserId} AND anime_id = {item.AnimeId} 
+                                  FOR UPDATE")
+                    .AnyAsync();
+
+                if (exists)
+                {
+                    await transaction.RollbackAsync();
+                    return null;
+                }
+
+                _context.WatchlistItems.Add(item);
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
                 return item;
             }
-            catch (DbUpdateException ex)
+            catch (Exception ex)
             {
-                Console.WriteLine($"Database error: {ex.InnerException?.Message ?? ex.Message}");
+                await transaction.RollbackAsync();
+                Console.WriteLine($"Database error: {ex.Message}");
                 throw;
             }
         }
