@@ -123,10 +123,6 @@ namespace AnimeTrackerApi.Data.Repositories
                 .AnyAsync(x => x.UserId == userId && x.AnimeId == animeId);
         }
 
-        public async Task<WatchlistItem> GetByUserAndAnimeIdAsync(int userId, int animeId)
-        {
-            return await _context.WatchlistItems
-                .FirstOrDefaultAsync(x => x.UserId == userId && x.AnimeId == animeId);
-        }
+
     }
 }
