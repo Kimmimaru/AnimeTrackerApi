@@ -14,14 +14,6 @@ namespace AnimeTrackerApi.Data.Repositories
 
         public async Task<WatchlistItem> AddToWatchlistAsync(WatchlistItem item)
         {
-            var existingItem = await _context.WatchlistItems
-                .FirstOrDefaultAsync(x => x.UserId == item.UserId && x.AnimeId == item.AnimeId);
-
-            if (existingItem != null)
-            {
-                return existingItem;
-            }
-
             _context.WatchlistItems.Add(item);
             await _context.SaveChangesAsync();
             return item;
