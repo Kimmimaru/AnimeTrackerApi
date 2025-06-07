@@ -19,31 +19,20 @@ namespace AnimeTrackerApi.Controllers
         }
 
         [HttpPost("add")]
-        public async Task<IActionResult> AddToWatchlist([FromQuery] int userId, [FromQuery] int animeId, [FromQuery] string status = "PlanToWatch")
+        public async Task<IActionResult> AddToWatchlist([FromBody] WatchlistItem item)
         {
-            if (animeId <= 0 || userId <= 0)
+            if (item.AnimeId <= 0 || item.UserId <= 0)
                 return BadRequest("Valid anime ID and user ID are required");
 
-            var animeDetails = await _jikanService.GetAnimeById(animeId);
+            var animeDetails = await _jikanService.GetAnimeById(item.AnimeId);
             if (animeDetails == null)
                 return NotFound("Anime not found");
 
-            var title = !string.IsNullOrEmpty(animeDetails.EnglishTitle)
-                ? animeDetails.EnglishTitle
-                : !string.IsNullOrEmpty(animeDetails.OriginalTitle)
-                    ? animeDetails.OriginalTitle
-                    : "Unknown Title";
-
-            var item = new WatchlistItem
-            {
-                UserId = userId,
-                AnimeId = animeId,
-                Title = animeDetails.GetBestAvailableTitle(),
-                Description = animeDetails.Synopsis,
-                PictureUrl = animeDetails.PictureUrl,
-                MyAnimeListUrl = $"https://localhost:7115/anime/{animeId}",
-                Status = status
-            };
+            item.Title = animeDetails.GetBestAvailableTitle();
+            item.Description = animeDetails.Synopsis;
+            item.PictureUrl = animeDetails.PictureUrl;
+            item.MyAnimeListUrl = $"https://myanimelist.net/anime/{item.AnimeId}";
+            item.AddedDate = DateTime.UtcNow;
 
             var result = await _watchlistRepository.AddToWatchlistAsync(item);
             return Ok(result);
