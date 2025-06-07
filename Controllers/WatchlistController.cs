@@ -22,41 +22,37 @@ namespace AnimeTrackerApi.Controllers
         [HttpPost("add")]
         public async Task<IActionResult> AddToWatchlist([FromBody] WatchlistItem item)
         {
+            if (item.AnimeId <= 0 || item.UserId <= 0)
+                return BadRequest("Valid anime ID and user ID are required");
+
             try
             {
-                if (await _watchlistRepository.CheckAnimeInWatchlistAsync(item.UserId, item.AnimeId))
+                var exists = await _watchlistRepository.CheckAnimeInWatchlistAsync(item.UserId, item.AnimeId);
+                if (exists)
                 {
-                    return Ok(new { success = true, message = "Already exists" });
+                    return Conflict("This anime is already in your watchlist");
                 }
 
                 var animeDetails = await _jikanService.GetAnimeById(item.AnimeId);
-                if (animeDetails == null) return NotFound();
+                if (animeDetails == null)
+                    return NotFound("Anime not found");
 
                 item.Title = animeDetails.GetBestAvailableTitle();
+                item.Description = animeDetails.Synopsis;
+                item.PictureUrl = animeDetails.PictureUrl;
+                item.MyAnimeListUrl = $"https://myanimelist.net/anime/{item.AnimeId}";
                 item.AddedDate = DateTime.UtcNow;
 
-                for (int i = 0; i < 3; i++)
-                {
-                    try
-                    {
-                        var result = await _watchlistRepository.AddToWatchlistAsync(item);
-                        if (result != null)
-                        {
-                            return Ok(new { success = true });
-                        }
-                        await Task.Delay(100 * (i + 1));
-                    }
-                    catch (DbUpdateConcurrencyException)
-                    {
-                        if (i == 2) throw;
-                    }
-                }
-
-                return Conflict();
+                var result = await _watchlistRepository.AddToWatchlistAsync(item);
+                return Ok(result);
+            }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, $"Database error: {ex.InnerException?.Message}");
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
