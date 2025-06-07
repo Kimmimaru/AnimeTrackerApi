@@ -89,18 +89,13 @@ namespace AnimeTrackerApi.Services
         {
             try
             {
-                var response = await _httpClient.GetAsync($"anime/{animeId}");
+                var response = await _httpClient.GetAsync($"https://myanimelist.p.rapidapi.com/v2/anime/{animeId}");
                 response.EnsureSuccessStatusCode();
 
                 var settings = new JsonSerializerSettings
                 {
-                    Error = (sender, args) =>
-                    {
-                        args.ErrorContext.Handled = true;
-                        Console.WriteLine($"Error parsing {args.ErrorContext.Path}: {args.ErrorContext.Error.Message}");
-                    },
-                    NullValueHandling = NullValueHandling.Ignore,
-                    MissingMemberHandling = MissingMemberHandling.Ignore
+                    Error = (sender, args) => args.ErrorContext.Handled = true,
+                    NullValueHandling = NullValueHandling.Ignore
                 };
 
                 var body = await response.Content.ReadAsStringAsync();
@@ -109,14 +104,16 @@ namespace AnimeTrackerApi.Services
                 if (result == null)
                     throw new Exception("Не вдалося обробити відповідь API");
 
+                // Заповнюємо обов'язкові поля
                 result.MyAnimeListId = animeId;
                 result.MyAnimeListUrl ??= $"https://myanimelist.net/anime/{animeId}";
+                result.PictureUrl ??= "https://via.placeholder.com/300x400?text=No+Image";
 
                 return result;
             }
             catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
             {
-                throw new Exception("Це аніме дуже нове або ще не вийшло, тому його немає в нашій базі");
+                throw new Exception("Аніме не знайдено в базі MyAnimeList");
             }
             catch (Exception ex)
             {
