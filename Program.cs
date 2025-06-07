@@ -5,9 +5,11 @@ using AnimeTrackerApi.Data;
 using AnimeTrackerApi.Bot.Services;
 using Telegram.Bot;
 using AnimeTrackerApi.Models;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -29,6 +31,8 @@ builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient("7883001
 builder.Services.AddHostedService<NotificationService>();
 builder.Services.AddScoped<IExpectedAnimeRepository, ExpectedAnimeRepository>();
 
+
+
 builder.Logging.AddConsole();
 
 
@@ -43,11 +47,7 @@ builder.Services.AddHttpClient<JikanService>(client =>
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate(); 
-}
+
 
 if (app.Environment.IsDevelopment())
 {
@@ -57,5 +57,23 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
+app.MapHealthChecks("/health");
 app.MapControllers();
+
+
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate(); 
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Помилка під час застосування міграцій");
+    }
+}
+
+
 app.Run();
