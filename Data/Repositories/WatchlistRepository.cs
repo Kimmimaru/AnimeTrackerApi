@@ -23,8 +23,17 @@ namespace AnimeTrackerApi.Data.Repositories
             }
 
             _context.WatchlistItems.Add(item);
-            await _context.SaveChangesAsync();
-            return item;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return item;
+            }
+            catch (DbUpdateException ex)
+            {
+                Console.WriteLine($"Database error: {ex.InnerException?.Message ?? ex.Message}");
+                throw;
+            }
         }
 
         public async Task<List<WatchlistItem>> GetUserWatchlistAsync(int userId)

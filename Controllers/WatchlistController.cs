@@ -2,6 +2,7 @@
 using AnimeTrackerApi.Data.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using AnimeTrackerApi.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace AnimeTrackerApi.Controllers
 {
@@ -24,18 +25,35 @@ namespace AnimeTrackerApi.Controllers
             if (item.AnimeId <= 0 || item.UserId <= 0)
                 return BadRequest("Valid anime ID and user ID are required");
 
-            var animeDetails = await _jikanService.GetAnimeById(item.AnimeId);
-            if (animeDetails == null)
-                return NotFound("Anime not found");
+            try
+            {
+                var exists = await _watchlistRepository.CheckAnimeInWatchlistAsync(item.UserId, item.AnimeId);
+                if (exists)
+                {
+                    return Conflict("This anime is already in your watchlist");
+                }
 
-            item.Title = animeDetails.GetBestAvailableTitle();
-            item.Description = animeDetails.Synopsis;
-            item.PictureUrl = animeDetails.PictureUrl;
-            item.MyAnimeListUrl = $"https://myanimelist.net/anime/{item.AnimeId}";
-            item.AddedDate = DateTime.UtcNow;
+                var animeDetails = await _jikanService.GetAnimeById(item.AnimeId);
+                if (animeDetails == null)
+                    return NotFound("Anime not found");
 
-            var result = await _watchlistRepository.AddToWatchlistAsync(item);
-            return Ok(result);
+                item.Title = animeDetails.GetBestAvailableTitle();
+                item.Description = animeDetails.Synopsis;
+                item.PictureUrl = animeDetails.PictureUrl;
+                item.MyAnimeListUrl = $"https://myanimelist.net/anime/{item.AnimeId}";
+                item.AddedDate = DateTime.UtcNow;
+
+                var result = await _watchlistRepository.AddToWatchlistAsync(item);
+                return Ok(result);
+            }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, $"Database error: {ex.InnerException?.Message}");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         [HttpGet]

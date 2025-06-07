@@ -38,6 +38,7 @@ builder.Services.AddHttpClient<JikanService>(client =>
 {
     client.BaseAddress = new Uri("https://myanimelist.p.rapidapi.com");
     client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 var app = builder.Build();
