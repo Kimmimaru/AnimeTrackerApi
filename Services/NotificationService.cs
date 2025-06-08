@@ -22,7 +22,7 @@ namespace AnimeTrackerApi.Bot.Services
         }
 
         private readonly IServiceProvider _serviceProvider;
-        private readonly TimeSpan CheckInterval = TimeSpan.FromMinutes(2);
+        private readonly TimeSpan CheckInterval = TimeSpan.FromHours(2);
 
 
         public NotificationService(IServiceProvider serviceProvider)
