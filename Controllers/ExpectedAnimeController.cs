@@ -48,5 +48,18 @@ namespace AnimeTrackerApi.Controllers
             var items = await _expectedAnimeRepository.GetUserExpectedAnimeAsync(userId);
             return Ok(items);
         }
+
+        [HttpGet("released-today")]
+        public async Task<IActionResult> GetReleasedToday()
+        {
+            var today = DateTime.UtcNow.Date;
+            var items = await _expectedAnimeRepository.GetAllExpectedAnimeAsync();
+
+            var releasedToday = items
+                .Where(x => x.ReleaseDate.Date == today)
+                .ToList();
+
+            return Ok(releasedToday);
+        }
     }
 }
