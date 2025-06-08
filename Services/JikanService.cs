@@ -7,6 +7,8 @@ using System;
 using Newtonsoft.Json.Linq;
 using AnimeTrackerApi.Models;
 using System.Net;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Globalization;
 
 namespace AnimeTrackerApi.Services
 {
@@ -160,79 +162,87 @@ namespace AnimeTrackerApi.Services
 
         public async Task<List<AnimeSearchResult>> FilterAnime(AnimeFilterParameters filterParams)
         {
-            var baseKeywords = new List<string>
-    {
-        "girl", "boy", "love", "school", "action",
-        "fantasy", "adventure", "comedy", "drama", "mystery"
-    };
+            var keywords = new[]
+            {
+            "girl", "boy", "love", "school", "action",
+            "fantasy", "adventure", "comedy", "drama", "mystery"
+        };
 
             var allResults = new List<AnimeSearchResult>();
-            var delayBetweenRequests = TimeSpan.FromMilliseconds(1100);
-            var random = new Random();
+            var rnd = new Random();
+            var delayMs = 1100;
 
-            foreach (var keyword in baseKeywords)
+            foreach (var kw in keywords)
             {
                 try
                 {
-                    var url = $"https://myanimelist.p.rapidapi.com/v2/anime/search?q={Uri.EscapeDataString(keyword)}&n={filterParams.Limit}";
-
-                    if (filterParams.MinScore.HasValue)
+                    var qp = new Dictionary<string, string?>
                     {
-                        url += $"&score={filterParams.MinScore}";
+                        ["q"] = kw,
+                        ["limit"] = filterParams.Limit.ToString(),
+                        ["min_score"] = filterParams.MinScore?.ToString(CultureInfo.InvariantCulture),
+                        ["genres"] = filterParams.Genres
+                    }
+                        .Where(x => !string.IsNullOrEmpty(x.Value))
+                        .ToDictionary(x => x.Key, x => x.Value!);
+
+                    var url = QueryHelpers.AddQueryString(
+                        "https://myanimelist.p.rapidapi.com/v2/anime/search",
+                        qp
+                    );
+
+                    using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                    req.Headers.TryAddWithoutValidation("x-rapidapi-key",
+                        "165d058607msh8ab3046a0d8716bp1fa923jsnec7d4e350aa5");
+                    req.Headers.TryAddWithoutValidation("x-rapidapi-host", "myanimelist.p.rapidapi.com");
+
+                    var resp = await _httpClient.SendAsync(req);
+                    resp.EnsureSuccessStatusCode();
+
+                    var body = await resp.Content.ReadAsStringAsync();
+                    List<AnimeSearchResult> results;
+
+                    if (body.TrimStart().StartsWith("["))
+                    {
+                        results = JsonConvert
+                                      .DeserializeObject<List<AnimeSearchResult>>(body)
+                                  ?? new List<AnimeSearchResult>();
+                    }
+                    else
+                    {
+                        var jo = JObject.Parse(body);
+                        var arr = jo["data"] as JArray;
+                        results = arr == null
+                            ? new List<AnimeSearchResult>()
+                            : arr
+                                .Select(x => x["node"]?.ToObject<AnimeSearchResult>())
+                                .Where(x => x != null)!
+                                .Cast<AnimeSearchResult>()
+                                .ToList();
                     }
 
-                    if (!string.IsNullOrEmpty(filterParams.Genres))
-                    {
-                        url += $"&genre={filterParams.Genres}";
-                    }
-
-                    var request = new HttpRequestMessage
-                    {
-                        Method = HttpMethod.Get,
-                        RequestUri = new Uri(url),
-                        Headers =
-                {
-                    { "x-rapidapi-key", "76ef60ff05mshcc3d651cf71e616p1eeab2jsnc90ef0788871" },
-                    { "x-rapidapi-host", "myanimelist.p.rapidapi.com" },
-                },
-                    };
-
-                    var response = await _httpClient.SendAsync(request);
-                    response.EnsureSuccessStatusCode();
-
-                    var body = await response.Content.ReadAsStringAsync();
-                    var results = JsonConvert.DeserializeObject<List<AnimeSearchResult>>(body);
-
-                    if (results != null && results.Any())
-                    {
-                        allResults.AddRange(results);
-                    }
-
-                    if (keyword != baseKeywords.Last())
-                    {
-                        await Task.Delay(delayBetweenRequests);
-                    }
+                    allResults.AddRange(results);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error filtering with keyword '{keyword}': {ex.Message}");
+                    Console.WriteLine($"Error filtering '{kw}': {ex.Message}");
                 }
+
+                await Task.Delay(delayMs);
             }
 
-            var uniqueResults = allResults
+            var unique = allResults
                 .GroupBy(a => a.MyAnimeListId)
                 .Select(g => g.First())
                 .ToList();
 
-            for (int i = uniqueResults.Count - 1; i > 0; i--)
+            for (var i = unique.Count - 1; i > 0; i--)
             {
-                int j = random.Next(i + 1);
-                var temp = uniqueResults[i];
-                uniqueResults[i] = uniqueResults[j];
-                uniqueResults[j] = temp;
+                var j = rnd.Next(i + 1);
+                (unique[i], unique[j]) = (unique[j], unique[i]);
             }
 
-            return uniqueResults;
+            return unique;
         }
 
 
