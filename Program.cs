@@ -27,7 +27,7 @@ builder.Services.AddHttpClient<LiveChartService>(client =>
     client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml");
 });
 builder.Services.AddScoped<LiveChartService>();
-builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient("7883001452:AAH5mOO9tlwOnjk_28z_M1N0YtPZoHpm1Pk"));
+
 
 builder.Services.AddHostedService<NotificationService>();
 builder.Services.AddScoped<IExpectedAnimeRepository, ExpectedAnimeRepository>();
