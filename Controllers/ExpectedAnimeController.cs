@@ -23,6 +23,24 @@ namespace AnimeTrackerApi.Controllers
             if (anime.UserId <= 0 || anime.AnimeId <= 0)
                 return BadRequest("Invalid user ID or anime ID");
 
+            var existing = await _expectedAnimeRepository.GetByUserAndAnimeIdAsync(anime.UserId, anime.AnimeId);
+            if (existing != null)
+            {
+                return Ok(existing);
+            }
+
+            anime.AddedDate = DateTime.UtcNow;
+
+            if (anime.ReleaseDate == default)
+            {
+                anime.ReleaseDate = DateTime.UtcNow.Date;
+            }
+
+            if (anime.ReleaseDate.Kind == DateTimeKind.Unspecified)
+            {
+                anime.ReleaseDate = DateTime.SpecifyKind(anime.ReleaseDate, DateTimeKind.Utc);
+            }
+
             var result = await _expectedAnimeRepository.AddToExpectedAsync(anime);
             return Ok(result);
         }

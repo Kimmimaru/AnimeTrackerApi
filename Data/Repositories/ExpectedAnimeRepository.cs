@@ -69,5 +69,10 @@ namespace AnimeTrackerApi.Models
                 .OrderBy(x => x.ReleaseDate)
                 .ToListAsync();
         }
+        public async Task<ExpectedAnime> GetByUserAndAnimeIdAsync(int userId, int animeId)
+        {
+            return await _context.ExpectedAnime
+                .FirstOrDefaultAsync(x => x.UserId == userId && x.AnimeId == animeId);
+        }
     }
 }

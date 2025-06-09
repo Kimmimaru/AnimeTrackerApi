@@ -11,5 +11,6 @@ namespace AnimeTrackerApi.Data.Repositories
         Task<List<ExpectedAnime>> GetUserExpectedAnimeAsync(int userId);
         Task<ExpectedAnime> GetByIdAsync(int id);
         Task<List<ExpectedAnime>> GetAllExpectedAnimeAsync();
+        Task<ExpectedAnime> GetByUserAndAnimeIdAsync(int userId, int animeId);
     }
 }
