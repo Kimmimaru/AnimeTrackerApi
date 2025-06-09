@@ -56,7 +56,7 @@ namespace AnimeTrackerApi.Controllers
             var items = await _expectedAnimeRepository.GetAllExpectedAnimeAsync();
 
             var releasedToday = items
-                .Where(x => x.ReleaseDate.Date == today)
+                .Where(x => x.ReleaseDate.Date == today && x.AddedDate.Date < today) 
                 .ToList();
 
             return Ok(releasedToday);
