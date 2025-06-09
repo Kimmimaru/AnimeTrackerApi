@@ -74,6 +74,7 @@ namespace AnimeTrackerApi.Services
                 doc.LoadHtml(html);
 
                 var animeList = new List<AnimeInfo>();
+                var now = DateTime.UtcNow;
 
                 var animeNodes = doc.DocumentNode.SelectNodes("//article[contains(@class, 'anime')]");
 
@@ -83,43 +84,42 @@ namespace AnimeTrackerApi.Services
                 {
                     try
                     {
+                        var premiereDateStr = node.GetAttributeValue("data-premiere", "");
+                        if (!long.TryParse(premiereDateStr, out var unixTimestamp))
+                            continue;
+
+                        var premiereDate = DateTimeOffset.FromUnixTimeSeconds(unixTimestamp).DateTime;
+
+                        if (premiereDate < now)
+                            continue;
+
                         var anime = new AnimeInfo
                         {
                             Id = node.GetAttributeValue("data-anime-id", 0),
                             RomajiTitle = node.GetAttributeValue("data-romaji", ""),
                             EnglishTitle = node.GetAttributeValue("data-english", ""),
                             NativeTitle = node.GetAttributeValue("data-native", ""),
-                            PremiereDate = DateTimeOffset.FromUnixTimeSeconds(
-                                node.GetAttributeValue("data-premiere", 0L)).DateTime,
-
+                            PremiereDate = premiereDate,
                             MainTitle = node.SelectSingleNode(".//h3[@class='main-title']/a")?.InnerText.Trim(),
                             Url = "https://www.livechart.me" + node.SelectSingleNode(".//h3[@class='main-title']/a")?
                                 .GetAttributeValue("href", ""),
-
                             Tags = node.SelectNodes(".//ol[@class='anime-tags']/li/a")?
                                 .Select(t => t.InnerText.Trim()).ToList(),
-
                             PosterUrl = GetPosterUrl(node),
-
                             Studio = node.SelectSingleNode(".//ul[@class='anime-studios']/li/a")?
                                 .InnerText.Trim(),
-
                             ReleaseDate = node.SelectSingleNode(".//div[@class='anime-date']")?
                                 .InnerText.Trim(),
-
                             Source = node.SelectSingleNode(".//div[@class='anime-source']")?
                                 .InnerText.Trim(),
                             Episodes = node.SelectSingleNode(".//div[@class='anime-episodes']")?
                                 .InnerText.Trim(),
-
                             Synopsis = node.SelectSingleNode(".//div[@class='anime-synopsis']/p")?
                                 .InnerText.Trim(),
-
                             Links = node.SelectNodes(".//div[@class='icon-buttons-set']/a")?
                                 .ToDictionary(
                                     a => a.GetAttributeValue("class", "").Replace("-icon", ""),
-                                    a => a.GetAttributeValue("href", "")
-                                )
+                                    a => a.GetAttributeValue("href", ""))
                         };
 
                         var episodeNode = node.SelectSingleNode(".//a[contains(@class, 'episode-countdown')]");
@@ -138,18 +138,19 @@ namespace AnimeTrackerApi.Services
                     }
                     catch 
                     {
+
                     }
                 }
 
-                return animeList;
+                return animeList
+                    .OrderBy(a => a.PremiereDate)
+                    .ToList();
             }
             catch (HttpRequestException e)
             {
                 Console.WriteLine($"Помилка при отриманні даних: {e.Message}");
                 return new List<AnimeInfo>();
             }
-
-
         }
 
         private string GetPosterUrl(HtmlNode node)
