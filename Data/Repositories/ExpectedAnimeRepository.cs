@@ -66,7 +66,6 @@ namespace AnimeTrackerApi.Models
         public async Task<List<ExpectedAnime>> GetAllExpectedAnimeAsync()
         {
             return await _context.ExpectedAnime
-                .Where(x => x.ReleaseDate >= DateTime.UtcNow.Date)
                 .OrderBy(x => x.ReleaseDate)
                 .ToListAsync();
         }

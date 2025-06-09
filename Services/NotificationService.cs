@@ -32,54 +32,7 @@ namespace AnimeTrackerApi.Bot.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("🔔 Notification Service started");
-
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                try
-                {
-                    _logger.LogInformation("🔍 Checking for releases...");
-
-                    using var scope = _serviceProvider.CreateScope();
-                    var repo = scope.ServiceProvider.GetRequiredService<IExpectedAnimeRepository>();
-                    var botClient = scope.ServiceProvider.GetRequiredService<ITelegramBotClient>();
-
-                    var today = DateTime.UtcNow.Date;
-                    var animeList = await repo.GetAllExpectedAnimeAsync();
-
-                    _logger.LogInformation($"📊 Found {animeList.Count} anime in tracking list");
-
-                    var releasedToday = animeList
-                        .Where(x => x.ReleaseDate.Date == today)
-                        .ToList();
-
-                    _logger.LogInformation($"🎬 Found {releasedToday.Count} anime released today");
-
-                    foreach (var anime in releasedToday)
-                    {
-                        _logger.LogInformation($"Processing: {anime.Title} (User: {anime.UserId})");
-
-                        try
-                        {
-                            await SendNotification(botClient, anime);
-
-                            await repo.RemoveFromExpectedAsync(anime.Id, anime.UserId);
-
-                            _logger.LogInformation($"✅ Notification sent for {anime.Title}");
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, $"❌ Failed to send notification for {anime.Title}");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "⚠️ Error in release checker");
-                }
-
-                await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
-            }
+            await DoWorkAsync(stoppingToken);
         }
 
         public async Task ManualCheckAsync()
