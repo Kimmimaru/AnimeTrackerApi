@@ -55,27 +55,28 @@ namespace AnimeTrackerApi.Bot.Services
                     var botClient = scope.ServiceProvider.GetRequiredService<ITelegramBotClient>();
 
                     var now = DateTime.UtcNow;
+                    var animeList = await repo.GetAllExpectedAnimeAsync();
 
-                    var releasedToday = await repo.GetAllExpectedAnimeAsync();
-                    releasedToday = releasedToday
-                        .Where(x => x.ReleaseDate.Date == now.Date && x.AddedDate.Date < now.Date)
-                        .ToList();
+                    _logger.LogInformation($"📊 Found {animeList.Count} anime in tracking list");
 
-                    _logger.LogInformation($"📊 Found {releasedToday.Count} anime released today");
-
-                    foreach (var anime in releasedToday)
+                    foreach (var anime in animeList)
                     {
-                        _logger.LogInformation($"🎬 Release today: {anime.Title} (User: {anime.UserId})");
+                        _logger.LogDebug($"Checking: {anime.Title} (Release: {anime.ReleaseDate})");
 
-                        try
+                        if (anime.ReleaseDate.Date <= now.Date)
                         {
-                            await SendNotification(botClient, anime);
-                            await repo.RemoveFromExpectedAsync(anime.Id, anime.UserId);
-                            _logger.LogInformation($"✅ Notification sent for {anime.Title}");
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, $"❌ Failed to send notification for {anime.Title}");
+                            _logger.LogInformation($"🎬 Release today: {anime.Title} (User: {anime.UserId})");
+
+                            try
+                            {
+                                await SendNotification(botClient, anime);
+                                await repo.RemoveFromExpectedAsync(anime.Id, anime.UserId);
+                                _logger.LogInformation($"✅ Notification sent for {anime.Title}");
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, $"❌ Failed to send notification for {anime.Title}");
+                            }
                         }
                     }
                 }
@@ -86,6 +87,7 @@ namespace AnimeTrackerApi.Bot.Services
 
                 await Task.Delay(CheckInterval, stoppingToken);
             }
+            
         }
 
 
