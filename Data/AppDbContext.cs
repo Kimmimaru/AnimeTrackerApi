@@ -45,7 +45,11 @@ namespace AnimeTrackerApi.Data
                 entity.Property(e => e.AnimeId).HasColumnName("anime_id");
                 entity.Property(e => e.Title).HasColumnName("title");
                 entity.Property(e => e.PosterUrl).HasColumnName("poster_url");
-                entity.Property(e => e.ReleaseDate).HasColumnName("release_date");
+
+                entity.Property(e => e.ReleaseDate)
+                      .HasColumnName("release_date")
+                      .ValueGeneratedNever();
+
                 entity.Property(e => e.AddedDate).HasColumnName("added_date");
                 entity.Property(e => e.MalUrl).HasColumnName("mal_url");
 
