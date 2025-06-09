@@ -193,7 +193,7 @@ namespace AnimeTrackerApi.Services
 
                     using var req = new HttpRequestMessage(HttpMethod.Get, url);
                     req.Headers.TryAddWithoutValidation("x-rapidapi-key",
-                        "165d058607msh8ab3046a0d8716bp1fa923jsnec7d4e350aa5");
+                        "76ef60ff05mshcc3d651cf71e616p1eeab2jsnc90ef0788871");
                     req.Headers.TryAddWithoutValidation("x-rapidapi-host", "myanimelist.p.rapidapi.com");
 
                     var resp = await _httpClient.SendAsync(req);
